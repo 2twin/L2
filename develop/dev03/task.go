@@ -59,7 +59,6 @@ func (cs *customSort) Swap(i, j int) {
 	cs.lines[i], cs.lines[j] = cs.lines[j], cs.lines[i]
 }
 
-// Основной метод сорировки
 func (cs *customSort) Less(i, j int) bool {
 	// Забираем текущую и предыдущую строку по определенному столбцу
 	line1 := getColumnValue(cs.lines[i], cs.key)
@@ -79,8 +78,8 @@ func (cs *customSort) Less(i, j int) bool {
 
 	// Если стоит флаг -h, конвертируем строки в числа без суффиксов
 	if cs.numericSuffix {
-		line1, line2 = convertToNumeric(convertToNumericSuffix(line1), convertToNumericSuffix(line2))
-		// line2 = convertToNumericSuffix(line2)
+		line1 = convertToNumeric(convertToNumericSuffix(line1))
+		line2 = convertToNumeric(convertToNumericSuffix(line2))
 	}
 
 	// Если стоит флаг -n, конвертируем строки в числа, и если
@@ -162,15 +161,13 @@ func convertToNumericSuffix(line string) string {
 }
 
 // convertToNumeric конвертирует строки в числовые значения
-func convertToNumeric(line1, line2 string) (string, string) {
-	num1, err1 := strconv.Atoi(line1)
-	num2, err2 := strconv.Atoi(line2)
+func convertToNumeric(line string) string {
+	num, err := strconv.Atoi(line)
 
-	if err1 == nil && err2 == nil {
-		return fmt.Sprintf("%064d", num1), fmt.Sprintf("%064d", num2)
+	if err != nil {
+		return line
 	}
-
-	return line1, line2
+	return fmt.Sprintf("%064d", num)
 }
 
 // sortLine сортирует строки по заданным параметрам конфига
