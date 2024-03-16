@@ -1,5 +1,11 @@
 package main
 
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
+
 /*
 === Поиск анаграмм по словарю ===
 
@@ -19,6 +25,51 @@ package main
 Программа должна проходить все тесты. Код должен проходить проверки go vet и golint.
 */
 
-func main() {
+// sortString сортирует строку по символам
+func sortString(w string) string {
+    s := strings.Split(w, "")
+    sort.Strings(s)
+    return strings.Join(s, "")
+}
 
+// findAnagrams принимает на вход массив строк и возвращает мапу множеств анаграмм
+func findAnagrams(words []string) map[string][]string {
+	// создаем мапу для хранения всех слов для каждого множества
+    anagramSets := make(map[string][]string)
+
+	// каждую строку в массиве сортируем, приводим к нижнему регистру и записываем в мапу
+	// по ключу отсортированной строки
+    for _, word := range words {
+        sortedWord := sortString(strings.ToLower(word))
+        anagramSets[sortedWord] = append(anagramSets[sortedWord], strings.ToLower(word))
+    }
+
+	// создаем мапу для хранения найденных анаграм
+    result := make(map[string][]string)
+
+	// забираем первое значение из массива по каждому ключу anagramSets,
+	// и если длина массива больше 1, записываем в результирующую мапу
+	// весь массив, ключом выступает его первый элемент
+    for _, value := range anagramSets {
+        if len(value) > 1 {
+			key := value[0]
+            sort.Strings(value)
+            result[key] = value
+        }
+    }
+
+    return result
+}
+
+func main() {
+	list := []string{
+		"столик", 
+		"пятак",
+		"тяпка", 
+		"алгоритм",
+		"листок", 
+		"пятка", 
+		"слиток", 
+	}
+	fmt.Println(findAnagrams(list))
 }
