@@ -94,11 +94,6 @@ func (cs *customSort) Less(i, j int) bool {
 		}
 	}
 
-	// Если стоит флаг -u, проверяем равны ли 2 соседние строки
-	if cs.unique {
-		return line1 != line2
-	}
-
 	// Если стоит флаг -r, сортируем в обратном порядке
 	if cs.reverse {
 
@@ -132,29 +127,35 @@ func getColumnValue(line string, key int) string {
 
 // convertToMonthName конвертирует строку в порядковый номер месяца
 func convertToMonthName(line string) string {
-	t, err := time.Parse("Jan", line)
-	if err != nil {
-		return line
+	fiels := strings.Fields(line)
+
+	for _, field := range fiels {
+		t, err := time.Parse("Jan", field)
+
+		if err == nil {
+			return fmt.Sprintf("%02d", t.Month())
+		}
 	}
 
-	return fmt.Sprintf("%02d", t.Month())
+	return line
+
 }
 
 // convertToNumericSuffix конвертирует строку в числовой вид без суффиксов
 func convertToNumericSuffix(line string) string {
 	if strings.HasSuffix(line, "K") {
 		num, _ := strconv.Atoi(strings.TrimSuffix(line, "K"))
-		return fmt.Sprintf("%064d", num * 1_000)
+		return fmt.Sprintf("%064d", num*1_000)
 	}
 
 	if strings.HasSuffix(line, "M") {
 		num, _ := strconv.Atoi(strings.TrimSuffix(line, "M"))
-		return fmt.Sprintf("%064d", num * 1_000_000)
+		return fmt.Sprintf("%064d", num*1_000_000)
 	}
 
 	if strings.HasSuffix(line, "G") {
 		num, _ := strconv.Atoi(strings.TrimSuffix(line, "G"))
-		return fmt.Sprintf("%064d", num * 1_000_000_000)
+		return fmt.Sprintf("%064d", num*1_000_000_000)
 	}
 
 	return line
@@ -171,21 +172,29 @@ func convertToNumeric(line string) string {
 }
 
 // sortLine сортирует строки по заданным параметрам конфига
-func sortLines(lines []string, key int, numeric, reverse, byMonth, ignoreBlanks, checkSort, numericSuffix, unique bool) []string {
-	cs := customSort{
-		lines:         lines,
-		key:           key,
-		numeric:       numeric,
-		reverse:       reverse,
-		byMonth:       byMonth,
-		ignoreBlanks:  ignoreBlanks,
-		checkSort:     checkSort,
-		numericSuffix: numericSuffix,
-		unique:        unique,
+func sortLines(cs *customSort) []string {
+	// Если стоит флаг -u, убираем дублирующиеся строки
+	if cs.unique {
+		cs.lines = newSet(cs.lines)
 	}
 
-	sort.Sort(&cs)
+	sort.Sort(cs)
 	return cs.lines
+}
+
+// newSet возвращает массив уникальных строк
+func newSet(lines []string) []string {
+	m := make(map[string]struct{})
+	var res []string
+
+	for _, line := range lines {
+		if _, ok := m[line]; !ok {
+			m[line] = struct{}{}
+			res = append(res, line)
+		}
+	}
+
+	return res
 }
 
 func main() {
@@ -220,7 +229,19 @@ func main() {
 		log.Fatal("Error reading input file:", err)
 	}
 
-	sortedLines := sortLines(lines, *key, *numeric, *reverse, *byMonth, *ignoreBlanks, *checkSort, *numericSuffix, *unique)
+	cs := &customSort{
+		lines:         lines,
+		key:           *key,
+		numeric:       *numeric,
+		reverse:       *reverse,
+		byMonth:       *byMonth,
+		ignoreBlanks:  *ignoreBlanks,
+		checkSort:     *checkSort,
+		numericSuffix: *numericSuffix,
+		unique:        *unique,
+	}
+
+	sortedLines := sortLines(cs)
 
 	outputFileHandle, err := os.Create("out.txt")
 	if err != nil {
