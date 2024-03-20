@@ -1,5 +1,19 @@
 package main
 
+import (
+	"context"
+	"dev11/internal/app"
+	"dev11/internal/config"
+	"dev11/internal/repository"
+	"dev11/internal/service"
+	"fmt"
+	"log"
+	"os/signal"
+	"syscall"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
 /*
 === HTTP server ===
 
@@ -18,10 +32,31 @@ package main
 В рамках задачи необходимо:
 	1. Реализовать все методы.
 	2. Бизнес логика НЕ должна зависеть от кода HTTP сервера.
-	3. В случае ошибки бизнес-логики сервер должен возвращать HTTP 503. В случае ошибки входных данных (невалидный int например) сервер должен возвращать HTTP 400. В случае остальных ошибок сервер должен возвращать HTTP 500. Web-сервер должен запускаться на порту указанном в конфиге и выводить в лог каждый обработанный запрос.
+	3. В случае ошибки бизнес-логики сервер должен возвращать HTTP 503. В случае ошибки входных данных (невалидный int например) сервер должен возвращать HTTP 400.
+	В случае остальных ошибок сервер должен возвращать HTTP 500. Web-сервер должен запускаться на порту указанном в конфиге и выводить в лог каждый обработанный запрос.
 	4. Код должен проходить проверки go vet и golint.
 */
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
+	config, err := config.NewConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	pool, err := pgxpool.New(ctx, fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", config.Postgres.User, config.Postgres.Password, config.Postgres.Host, config.Postgres.Port, config.Postgres.DB))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = pool.Ping(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	repository := repository.NewEventRepository(pool)
+	service := service.NewEventService(repository)
+	app := app.NewApp(service, config.Server.Addr)
+	app.Run()
 }
