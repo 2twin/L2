@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"dev11/internal/app"
-	// "dev11/internal/config"
+	"dev11/internal/config"
 	"dev11/internal/repository"
 	"dev11/internal/service"
-	// "fmt"
+	"fmt"
 	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -39,13 +39,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// config, err := config.NewConfig()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	config, err := config.NewConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// pool, err := pgxpool.New(ctx, fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", config.Postgres.User, config.Postgres.Password, config.Postgres.Host, config.Postgres.Port, config.Postgres.DB))
-	pool, err := pgxpool.New(ctx, "postgres://postgres:root@localhost:5432/dev11?sslmode=disable")
+	pool, err := pgxpool.New(ctx, fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", config.User, config.Password, config.Host, config.Port, config.DB))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,6 +56,6 @@ func main() {
 
 	repository := repository.NewEventRepository(pool)
 	service := service.NewEventService(repository)
-	app := app.NewApp(service, /*config.Server.Addr*/ ":8080")
+	app := app.NewApp(service, config.Addr)
 	app.Run()
 }
