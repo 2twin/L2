@@ -22,6 +22,126 @@ package main
 	4. Код должен проходить проверки go vet и golint.
 */
 
-func main() {
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+)
 
+// Domain object
+type Event struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Date string `json:"date"`
+}
+
+// Response object
+type Response struct {
+	Result Event  `json:"result"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type Repository struct {
+	Events map[int]Event
+}
+
+// Helper function to serialize object to JSON
+func toJSON(obj interface{}) []byte {
+	result, err := json.Marshal(obj)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %v", err)
+	}
+	return result
+}
+
+// Helper function to handle HTTP errors
+func handleError(w http.ResponseWriter, statusCode int, err string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	response := ErrorResponse{Error: err}
+	w.Write(toJSON(response))
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	dat, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+		w.WriteHeader(500)
+		return
+	}
+	w.WriteHeader(code)
+	w.Write(dat)
+}
+
+// Middleware for logging requests
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// HTTP handler for /create_event
+func createEventHandler(w http.ResponseWriter, r *http.Request) {
+	// Implement your business logic here
+	id := r.URL.Query().Get("id")
+	name := r.URL.Query().Get("name")
+	date := r.URL.Query().Get("date")
+
+	if id == "" || name == "" || date == "" {
+		// Example of handling an error
+		handleError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, Response{
+		Result: Event{
+			ID:   id,
+			Name: name,
+			Date: date,
+		},
+	})
+}
+
+// HTTP handler for /update_event
+func updateEventHandler(w http.ResponseWriter, r *http.Request) {
+	// Implement your business logic here
+}
+
+// HTTP handler for /delete_event
+func deleteEventHandler(w http.ResponseWriter, r *http.Request) {
+	// Implement your business logic here
+}
+
+// HTTP handler for /events_for_day
+func eventsForDayHandler(w http.ResponseWriter, r *http.Request) {
+	// Implement your business logic here
+}
+
+// HTTP handler for /events_for_week
+func eventsForWeekHandler(w http.ResponseWriter, r *http.Request) {
+	// Implement your business logic here
+}
+
+// HTTP handler for /events_for_month
+func eventsForMonthHandler(w http.ResponseWriter, r *http.Request) {
+	// Implement your business logic here
+}
+
+func main() {
+	// Setting up HTTP routes
+	http.HandleFunc("/create_event", createEventHandler)
+	http.HandleFunc("/update_event", updateEventHandler)
+	http.HandleFunc("/delete_event", deleteEventHandler)
+	http.HandleFunc("/events_for_day", eventsForDayHandler)
+	http.HandleFunc("/events_for_week", eventsForWeekHandler)
+	http.HandleFunc("/events_for_month", eventsForMonthHandler)
+
+	// Applying logging middleware
+	http.ListenAndServe(":8080", loggingMiddleware(http.DefaultServeMux))
 }
